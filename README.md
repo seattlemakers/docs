@@ -1,3 +1,3 @@
 # docs
-[Wiki and documentation for Seattle Makers](https://github.com/seattlemakers/docs/wiki)
+[Wiki](https://github.com/seattlemakers/docs/wiki) and documentation for Seattle Makers
 
