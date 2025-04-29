@@ -31,6 +31,14 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           # Fetch all history and tags
           fetch-depth: 0
+          path: main-repo
+      
+      - name: Checkout wiki repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: docs-wiki
       
       - name: Link Checker
         id: lychee
@@ -43,7 +51,8 @@ jobs:
             --timeout 30
             --insecure
             --github-token ${{ secrets.GITHUB_TOKEN }}
-            "./**/*.md"
+            "./main-repo/**/*.md"
+            "./docs-wiki/**/*.md"
           # Don't fail on link errors
           fail: false
           # Output file 
