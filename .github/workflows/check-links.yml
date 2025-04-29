@@ -1,0 +1,54 @@
+name: Check Links
+
+on:
+  # Run on push to the main branch
+  workflow_dispatch:
+  schedule:
+    # Run once a day at midnight
+    - cron: '0 0 * * *'
+  push:
+    branches: [ main ]
+
+jobs:
+  check-links:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: docs
+
+      - name: Checkout wiki repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: docs.wiki
+
+      # Setup PowerShell
+      - name: Setup PowerShell
+        uses: actions/setup-powershell@v2
+        with:
+          powershell-version: '7.4'
+
+      # Setup Rust and Cargo for lychee
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install lychee
+        run: cargo install lychee
+        
+      # Run the link checker script
+      - name: Check links
+        run: |
+          cd docs
+          pwsh ./scripts/check-links.ps1 -Target all -JsonOutput -OutputFile link-report.json
+          
+      # Upload the link report as an artifact
+      - name: Upload link check report
+        uses: actions/upload-artifact@v3
+        with:
+          name: link-check-report
+          path: docs/link-report.json
