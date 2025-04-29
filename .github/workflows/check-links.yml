@@ -15,40 +15,29 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          path: docs
 
       - name: Checkout wiki repository
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository }}.wiki
-          path: docs.wiki
+          path: .wiki
 
-      # Setup PowerShell
-      - name: Setup PowerShell
-        uses: actions/setup-powershell@v2
+      # Use the lychee action to check links
+      - name: Link Checker
+        id: lychee
+        uses: lycheeverse/lychee-action@v2
         with:
-          powershell-version: '7.4'
-
-      # Setup Rust and Cargo for lychee
-      - name: Setup Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-
-      - name: Install lychee
-        run: cargo install lychee
-        
-      # Run the link checker script
-      - name: Check links
-        run: |
-          cd docs
-          pwsh ./scripts/check-links.ps1 -Target all -JsonOutput -OutputFile link-report.json
+          # Check all markdown and HTML files in the repo
+          args: --verbose --no-progress './**/*.md' './**/*.html'
+          # Use json output format for GitHub annotations
+          format: json
+          # Create a new GitHub issue when there are broken links
+          fail: true
+          jobSummary: true
           
       # Upload the link report as an artifact
       - name: Upload link check report
         uses: actions/upload-artifact@v3
         with:
           name: link-check-report
-          path: docs/link-report.json
+          path: lychee/out.json
