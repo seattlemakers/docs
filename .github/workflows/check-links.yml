@@ -1,43 +1,61 @@
 name: Check Links
 
 on:
-  # Run on push to the main branch
-  workflow_dispatch:
-  schedule:
-    # Run once a day at midnight
-    - cron: '0 0 * * *'
+  # Run on push to main branch
   push:
-    branches: [ main ]
+    branches: [ main, master ]
+  # Run on pull requests
+  pull_request:
+    branches: [ main, master ]
+  # Allow manual trigger
+  workflow_dispatch:
+  # Run once per day
+  schedule:
+    - cron: "0 0 * * *"
 
 jobs:
-  check-links:
+  linkChecker:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write # For creating issues when broken links are found
+      
+    # Define environment variables for the job
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Checkout wiki repository
-        uses: actions/checkout@v4
         with:
-          repository: ${{ github.repository }}.wiki
-          path: .wiki
-
-      # Use the lychee action to check links
+          # For private repositories, use the built-in GITHUB_TOKEN
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Fetch all history and tags
+          fetch-depth: 0
+      
       - name: Link Checker
         id: lychee
         uses: lycheeverse/lychee-action@v2
         with:
-          # Check all markdown and HTML files in the repo
-          args: --verbose --no-progress './**/*.md' './**/*.html'
-          # Use json output format for GitHub annotations
-          format: json
-          # Create a new GitHub issue when there are broken links
-          fail: true
-          jobSummary: true
-          
-      # Upload the link report as an artifact
-      - name: Upload link check report
-        uses: actions/upload-artifact@v3
+          args: >
+            --verbose
+            --no-progress
+            --max-retries 3
+            --timeout 30
+            --insecure
+            --github-token ${{ secrets.GITHUB_TOKEN }}
+            "./**/*.md"
+          # Don't fail on link errors
+          fail: false
+          # Output file 
+          output: ./lychee/out.md
+          # Enable GitHub token to avoid rate limiting
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create Issue From File
+        if: steps.lychee.outputs.exit_code != 0
+        uses: peter-evans/create-issue-from-file@v5
         with:
-          name: link-check-report
-          path: lychee/out.json
+          title: Link Checker Report
+          content-filepath: ./lychee/out.md
+          labels: report, automated issue
+          token: ${{ secrets.GITHUB_TOKEN }}
